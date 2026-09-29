@@ -5,6 +5,7 @@ on: [workflow_call]
 # Add permissions for the GITHUB_TOKEN
 permissions:
   contents: write # Needed for pushing tags
+  id-token: write # Needed for PyPI Trusted Publishing
 
 jobs:
   tag-releases:
@@ -58,6 +59,8 @@ jobs:
     needs: [tag-releases]
     runs-on: ubuntu-latest
     if: ${{ github.ref == 'refs/heads/main' && needs.tag-releases.outputs.version_changed == 'true' }}
+    permissions:
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -83,4 +86,9 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Publish package
-        run: uv publish --token ${{ secrets.PYPI_TOKEN }}
+        run: |
+          if [ -n "${{ secrets.PYPI_TOKEN }}" ]; then
+            uv publish --token "${{ secrets.PYPI_TOKEN }}"
+          else
+            uv publish
+          fi
