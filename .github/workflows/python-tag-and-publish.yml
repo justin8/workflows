@@ -1,3 +1,4 @@
+# NOTE: For PyPI Trusted Publishing (OIDC), use composite action python-tag-and-publish/action.yml instead so OIDC claims match the caller repository (warehouse#11096).
 name: Publish
 
 on: [workflow_call]
@@ -86,9 +87,4 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Publish package
-        run: |
-          if [ -n "${{ secrets.PYPI_TOKEN }}" ]; then
-            uv publish --token "${{ secrets.PYPI_TOKEN }}"
-          else
-            uv publish
-          fi
+        run: uv publish
