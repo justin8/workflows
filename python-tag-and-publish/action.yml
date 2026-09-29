@@ -7,10 +7,6 @@ inputs:
     description: "Path to Python version file"
     required: false
     default: ".python-version"
-  codecov-token:
-    description: "Codecov token"
-    required: false
-    default: ""
 
 runs:
   using: "composite"
@@ -61,10 +57,10 @@ runs:
         name: dist
 
     - name: Upload coverage reports to Codecov
-      if: steps.tag_releases.outputs.version_changed == 'true' && inputs.codecov-token != ''
+      if: steps.tag_releases.outputs.version_changed == 'true'
       uses: codecov/codecov-action@v5
       with:
-        token: ${{ inputs.codecov-token }}
+        use_oidc: true
 
     # Uses PyPI Trusted Publishing exclusively via OIDC minting - no API tokens
     - name: Publish package to PyPI
