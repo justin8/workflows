@@ -1,6 +1,6 @@
 # Composite action used instead of reusable workflow so GitHub Actions OIDC claims match the caller repository for PyPI Trusted Publishing (warehouse#11096)
-name: "Python Tag and Publish"
-description: "Check for version bump, tag the release, and publish to PyPI using Trusted Publishing (uv publish)"
+name: "Python Publish"
+description: "Publishes package to PyPI via Trusted Publishing (uv publish) and creates a GitHub release"
 
 inputs:
   python-version-file:
@@ -13,57 +13,30 @@ runs:
   steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 2
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
-
-    - name: Check version change and tag
-      id: tag_releases
-      shell: bash
-      run: |
-        pip install tomli
-        current_version=$(python -c "import tomli; print(tomli.load(open('pyproject.toml', 'rb'))['project']['version'])")
-        echo "Current version: $current_version"
-        git checkout HEAD^
-        prev_version=$(python -c "import tomli; print(tomli.load(open('pyproject.toml', 'rb'))['project']['version'])")
-        git checkout -
-        echo "Previous version: $prev_version"
-
-        if [ "$current_version" != "$prev_version" ]; then
-          echo "Version changed from $prev_version to $current_version"
-          echo "Version has been updated. Tagging."
-          git tag "$current_version" || :
-          git push --tags || :
-          echo "version_changed=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "Version unchanged. Skipping publish."
-          echo "version_changed=false" >> "$GITHUB_OUTPUT"
-        fi
 
     - name: Install UV
-      if: steps.tag_releases.outputs.version_changed == 'true'
       uses: astral-sh/setup-uv@v5
       with:
         enable-cache: true
 
     - name: Download built package
-      if: steps.tag_releases.outputs.version_changed == 'true'
       uses: actions/download-artifact@v4
       with:
         name: dist
 
     - name: Upload coverage reports to Codecov
-      if: steps.tag_releases.outputs.version_changed == 'true'
       uses: codecov/codecov-action@v5
       with:
         use_oidc: true
 
     # Uses PyPI Trusted Publishing exclusively via OIDC minting - no API tokens
     - name: Publish package to PyPI
-      if: steps.tag_releases.outputs.version_changed == 'true'
       shell: bash
       run: uv publish
+
+    - name: Create GitHub Release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release create "${{ github.ref_name }}" --generate-notes dist/* || :
