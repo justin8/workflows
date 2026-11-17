@@ -82,3 +82,31 @@ jobs:
     steps:
       - uses: justin8/workflows/python-tag-and-publish@main
 ```
+
+---
+
+### 3. `renovate.yml` (Reusable Workflow)
+
+Location: `.github/workflows/renovate.yml`
+
+A reusable workflow (`workflow_call`) that runs self-hosted [Renovate](https://docs.renovatebot.com/) when checkboxes are ticked on the Dependency Dashboard issue or a Renovate PR (or when manually dispatched via `workflow_dispatch`).
+
+**Usage:**
+
+Create `.github/workflows/renovate.yml` in the caller repository:
+
+```yaml
+name: Renovate
+
+on:
+  issues:
+    types: [edited]
+  pull_request:
+    types: [edited]
+  workflow_dispatch:
+
+jobs:
+  renovate:
+    uses: justin8/workflows/.github/workflows/renovate.yml@main
+    secrets: inherit
+```

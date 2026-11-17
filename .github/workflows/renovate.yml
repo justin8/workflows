@@ -1,0 +1,56 @@
+name: Renovate
+
+on:
+  workflow_call:
+    secrets:
+      RENOVATE_TOKEN:
+        description: "Personal Access Token for Renovate (falls back to github.token)"
+        required: false
+
+concurrency:
+  group: renovate-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  renovate:
+    name: Renovate
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'schedule' ||
+      (
+        github.actor == github.repository_owner &&
+        github.event.changes.body.from != '' &&
+        (
+          (
+            github.event_name == 'issues' &&
+            github.event.issue.title == 'Dependency Dashboard' &&
+            (
+              contains(github.event.issue.body, '[x] <!--') ||
+              contains(github.event.issue.body, '[X] <!--')
+            )
+          ) ||
+          (
+            github.event_name == 'pull_request' &&
+            startsWith(github.event.pull_request.head.ref, 'renovate/') &&
+            (
+              contains(github.event.pull_request.body, '[x] <!--') ||
+              contains(github.event.pull_request.body, '[X] <!--')
+            )
+          )
+        )
+      )
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v46.3.14
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN || github.token }}
+        env:
+          LOG_LEVEL: info
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_ONBOARDING: "false"
+          RENOVATE_HOST_RULES: >-
+            [{"matchHost":"ghcr.io","hostType":"docker","username":"${{ github.repository_owner }}","password":"${{ secrets.RENOVATE_TOKEN || github.token }}"}]
